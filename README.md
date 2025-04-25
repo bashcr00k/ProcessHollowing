@@ -1,6 +1,10 @@
 # ProcessHollowing
 A simple Process Hollowing poc written in c 
 
+# UPDATE 
+
+i tried the poc on win 10 and it worked perfectly so here we go at least that wasn't for nothing 
+
 # IMPORTANT
 
 THIS POC DOESN'T WORK
