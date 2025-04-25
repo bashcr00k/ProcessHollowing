@@ -44,8 +44,9 @@ here are some possible causes that might be why it crashes and gives that error 
 - a problem with my envi so if you try it and it works for you please enform me
 
 
+
 # ScreenShot
-<img width="1279" alt="processhollowing" src="https://github.com/user-attachments/assets/fb73f1d1-876f-4edf-8211-5b7fd0238055" />
+<img width="1279" alt="processhollowing" src="https://github.com/user-attachments/assets/d4c76c09-2eb2-430b-894b-2e22853c83d2" />
 
 --------------- 
 # HACK THE PLANET
