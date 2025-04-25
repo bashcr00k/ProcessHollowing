@@ -37,6 +37,12 @@ If you wanna try the poc make sure you change the paths inside it with 32bit tar
 
 i would really appreciate some help if anyone can tell whats wrong please contact me 
 
+here are some possible causes that might be why it crashes and gives that error :
+
+- not resolving the iat table (even tho i saw some codes online that didn't resolve it but still when i tried them i got the same error)
+
+- a problem with my envi so if you try it and it works for you please enform me
+
 -------------------------
 
 # HACK THE PLANET
