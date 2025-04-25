@@ -10,11 +10,17 @@ THIS POC DOESN'T WORK
 - Its A technique that is done in a couple of steps :
   
 1 - Creating A process in a suspended state
+
 2 - Parsing The PEB which contains infos about the process to get the base address which we will need later 
+
 3 - Unmapping the base address using NtUnmapViewOfSection (that was resolved previously)
+
 4 - Allocating space in the previously unmapped section then writing the injected pe into the base address
+
 5 - Editing the eip reg (for x32) into the new entry point
+
 6 - resuming the thread which executes our injected pe while keeping the same process pid
+
 # Why do this 
 
 this is a very common process injection technique it is used to evade some avs also might be used as a start to escalate privs 
