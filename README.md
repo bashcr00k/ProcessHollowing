@@ -46,8 +46,8 @@ here are some possible causes that might be why it crashes and gives that error 
 
 
 # ScreenShot
-
-<img width="1197" alt="processhollowing" src="https://github.com/user-attachments/assets/0435add0-e2dc-40e9-a068-3a6e334a748e" />
+<img width="1108" alt="proc" src="https://github.com/user-attachments/assets/e6b4bdd4-fb18-4f0c-8554-b5baad1d1349" />
 --------------- 
 # HACK THE PLANET
+
 
