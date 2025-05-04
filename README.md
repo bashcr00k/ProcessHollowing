@@ -55,3 +55,6 @@ here are some possible causes that might be why it crashes and gives that error 
 # HACK THE PLANET
 
 
+# FOR EDUCATIONAL PURPOSES ONLY
+
+
